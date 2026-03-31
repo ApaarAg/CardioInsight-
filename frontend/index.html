@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardioAI - Advanced Clinical Decision Support</title>
+    <meta name="description"
+        content="AI-Powered Heart Disease Prediction with Explainable AI for Medical Professionals">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        medical: {
+                            blue: '#3B82F6',
+                            teal: '#06B6D4',
+                            dark: '#0F172A',
+                            surface: '#1E293B',
+                            accent: '#8B5CF6'
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Utilities */
+        body {
+            background-color: #0F172A;
+            color: #F8FAFC;
+            overflow-x: hidden;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #3B82F6, #06B6D4, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-border-mask {
+            position: relative;
+            background: #1E293B;
+            background-clip: padding-box;
+            border: 1px solid transparent;
+            border-radius: 1rem;
+        }
+
+        .gradient-border-mask::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: -1;
+            margin: -1px;
+            border-radius: inherit;
+            background: linear-gradient(to right, #3B82F6, #8B5CF6);
+        }
+
+        /* Video Background Replacement (Canvas) */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tilt-card {
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+        }
+
+        .magnetic-btn {
+            display: inline-block;
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0F172A;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .glow-point {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            mix-blend-mode: screen;
+        }
+    </style>
+</head>
+
+<body class="antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Dynamic Background -->
+    <canvas id="bg-canvas"></canvas>
+    <div class="video-overlay"></div>
+
+    <!-- Floating Orbs -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none -z-[1]">
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600/20 rounded-full blur-3xl animate-blob"></div>
+        <div
+            class="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-teal-600/20 rounded-full blur-3xl animate-blob animation-delay-4000">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 transition-all duration-300 top-0" id="navbar">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between glass rounded-2xl px-6 py-3">
+                <div class="flex items-center gap-2">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-teal-400 flex items-center justify-center">
+                        <i class="fa-solid fa-heart-pulse text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-display font-bold tracking-tight">Cardio<span
+                            class="text-blue-400">AI</span></span>
+                </div>
+                <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+                    <a href="#features" class="hover:text-white transition-colors">Features</a>
+                    <a href="#how-it-works" class="hover:text-white transition-colors">How it Works</a>
+                    <a href="#explainability" class="hover:text-white transition-colors">Explainability</a>
+                    <a href="#demo" class="hover:text-white transition-colors">Live Demo</a>
+                </div>
+                <button class="hidden md:block glass-btn text-white px-5 py-2 rounded-xl text-sm font-medium">
+                    Doctor Portal
+                </button>
+                <button class="md:hidden text-white text-xl">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20">
+        <div class="container mx-auto px-6 text-center z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 animate-float">
+                <span class="relative flex h-2 w-2">
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                </span>
+                <span class="text-xs font-medium text-teal-300 tracking-wide uppercase">FDA Guidelines Compliant</span>
+            </div>
+
+            <h1
+                class="text-5xl md:text-7xl font-display font-bold mb-6 leading-tight max-w-5xl mx-auto reveal tracking-tight">
+                AI-Powered <br>
+                <span class="gradient-text">Heart Disease Prediction</span> <br>
+                with Transparent Explanations
+            </h1>
+
+            <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 reveal"
+                style="transition-delay: 100ms;">
+                Empowering clinicians with real-time, explainable risk assessment for early cardiac intervention.
+                Validated accuracy with SHAP-based feature importance.
+            </p>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 reveal"
+                style="transition-delay: 200ms;">
+                <a href="#demo"
+                    class="magnetic-btn group relative px-8 py-4 bg-blue-600 rounded-xl overflow-hidden shadow-lg shadow-blue-500/25 transition-all hover:scale-105 hover:shadow-blue-500/40">
+                    <div
+                        class="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 via-blue-400 to-blue-600 opacity-0 group-hover:opacity-20 transition-opacity">
+                    </div>
+                    <span class="relative font-semibold text-white">Try Interactive Demo</span>
+                </a>
+                <a href="#how-it-works"
+                    class="magnetic-btn px-8 py-4 glass-btn rounded-xl text-white font-medium hover:bg-white/5 transition-all">
+                    <span>Learn How It Works</span>
+                    <i class="fa-solid fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
+                </a>
+            </div>
+
+            <!-- Scroll Indicator -->
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce opacity-50">
+                <div class="w-6 h-10 border-2 border-slate-400 rounded-full flex justify-center p-1">
+                    <div class="w-1 h-2 bg-slate-400 rounded-full animate-scroll"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -->
+    <section class="py-20 border-y border-white/5 bg-slate-900/50 backdrop-blur-sm">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="text-center reveal">
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2 counter" data-target="95">0</div>
+                    <div class="text-sm text-slate-400 uppercase tracking-wider">Accuracy Rate</div>
+                </div>
+                <div class="text-center reveal" style="transition-delay: 100ms;">
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2 counter" data-target="10000">0</div>
+                    <div class="text-sm text-slate-400 uppercase tracking-wider">Records Analyzed</div>
+                </div>
+                <div class="text-center reveal" style="transition-delay: 200ms;">
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2 counter" data-target="500">0</div>
+                    <div class="text-sm text-slate-400 uppercase tracking-wider">Clinician Users</div>
+                </div>
+                <div class="text-center reveal" style="transition-delay: 300ms;">
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2"><span class="counter"
+                            data-target="2">0</span>s</div>
+                    <div class="text-sm text-slate-400 uppercase tracking-wider">Analysis Time</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-32 relative">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">Clinical-Grade Features</h2>
+                <p class="text-slate-400 max-w-2xl mx-auto">Built for precision medicine with features designed to
+                    integrate seamlessly into clinical workflows.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div
+                    class="tilt-card glass-card p-8 rounded-2xl relative group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 reveal">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-brain text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">Multi-Disease Prediction</h3>
+                    <p class="text-slate-400 leading-relaxed">Simultaneous risk stratification for Coronary Heart
+                        Disease, Diabetes Type 2, and Hypertension using ensemble models.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="tilt-card glass-card p-8 rounded-2xl relative group hover:shadow-2xl hover:shadow-teal-500/10 transition-all duration-300 reveal"
+                    style="transition-delay: 100ms;">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-teal-500/20 flex items-center justify-center mb-6 text-teal-400 group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-chart-bar text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">SHAP Explainability</h3>
+                    <p class="text-slate-400 leading-relaxed">Wait-box transparency. Visualize exactly which biomarkers
+                        contributed to the risk score for each patient.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="tilt-card glass-card p-8 rounded-2xl relative group hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 reveal"
+                    style="transition-delay: 200ms;">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-user-doctor text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">Decision Support</h3>
+                    <p class="text-slate-400 leading-relaxed">Actionable clinical recommendations based on risk
+                        stratification tiers, updated with latest AHA guidelines.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-24 bg-slate-900/50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-20 reveal">
+                <h2 class="text-3xl md:text-4xl font-display font-bold mb-4">Workflow Integration</h2>
+            </div>
+
+            <div class="relative">
+                <!-- Connecting Line -->
+                <div
+                    class="hidden md:block absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-blue-500/20 via-teal-500/20 to-purple-500/20 -translate-y-1/2">
+                </div>
+
+                <div class="grid md:grid-cols-4 gap-8 relative z-10">
+                    <!-- Step 1 -->
+                    <div class="reveal text-center">
+                        <div
+                            class="w-20 h-20 mx-auto bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-2xl text-blue-400 mb-6 shadow-lg shadow-black/50 overflow-hidden relative group">
+                            <div
+                                class="absolute inset-0 bg-blue-500/10 scale-0 group-hover:scale-100 transition-transform rounded-full">
+                            </div>
+                            <i class="fa-solid fa-file-medical"></i>
+                        </div>
+                        <h4 class="text-lg font-bold mb-2">1. Input Data</h4>
+                        <p class="text-sm text-slate-400">Enter standard biomarkers & patient history</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="reveal text-center" style="transition-delay: 100ms;">
+                        <div
+                            class="w-20 h-20 mx-auto bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-2xl text-teal-400 mb-6 shadow-lg shadow-black/50 relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-teal-500/10 scale-0 group-hover:scale-100 transition-transform rounded-full">
+                            </div>
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <h4 class="text-lg font-bold mb-2">2. AI Analysis</h4>
+                        <p class="text-sm text-slate-400">Ensemble model processes risk factors</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="reveal text-center" style="transition-delay: 200ms;">
+                        <div
+                            class="w-20 h-20 mx-auto bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-2xl text-purple-400 mb-6 shadow-lg shadow-black/50 relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-purple-500/10 scale-0 group-hover:scale-100 transition-transform rounded-full">
+                            </div>
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <h4 class="text-lg font-bold mb-2">3. Risk & Why</h4>
+                        <p class="text-sm text-slate-400">Get score + SHAP feature importance</p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="reveal text-center" style="transition-delay: 300ms;">
+                        <div
+                            class="w-20 h-20 mx-auto bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center text-2xl text-green-400 mb-6 shadow-lg shadow-black/50 relative overflow-hidden group">
+                            <div
+                                class="absolute inset-0 bg-green-500/10 scale-0 group-hover:scale-100 transition-transform rounded-full">
+                            </div>
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <h4 class="text-lg font-bold mb-2">4. Action</h4>
+                        <p class="text-sm text-slate-400">Clinical decision based on clear evidence</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Explainability Section -->
+    <section id="explainability" class="py-32">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center gap-16">
+                <!-- Left Content -->
+                <div class="md:w-1/2 reveal">
+                    <h2 class="text-3xl md:text-4xl font-display font-bold mb-6">See <span
+                            class="text-teal-400">Why</span> The AI Made Its Prediction</h2>
+                    <p class="text-slate-400 mb-8 leading-relaxed">
+                        Black-box models are insufficient for healthcare. CardioAI uses SHAP (SHapley Additive
+                        exPlanations) values to mathematically quantify the contribution of every feature to the final
+                        prediction.
+                    </p>
+
+                    <div class="space-y-6">
+                        <div class="glass p-6 rounded-xl border-l-4 border-red-500">
+                            <h4 class="font-bold mb-2 flex items-center gap-2"><i
+                                    class="fa-solid fa-ban text-red-500"></i> Traditional Black Box</h4>
+                            <p class="text-sm text-slate-400">"Patient has 85% risk." (No reason given)</p>
+                        </div>
+                        <div
+                            class="glass p-6 rounded-xl border-l-4 border-green-500 transform translate-x-4 shadow-xl shadow-green-900/10">
+                            <h4 class="font-bold mb-2 flex items-center gap-2"><i
+                                    class="fa-solid fa-check text-green-500"></i> CardioAI Transparent</h4>
+                            <p class="text-sm text-slate-400">"Patient has 85% risk, primarily driven by LDL Cholesterol
+                                (40% impact) and Age (25% impact)."</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Visual (Mock Chart) -->
+                <div class="md:w-1/2 w-full reveal" style="transition-delay: 200ms;">
+                    <div class="glass-card p-8 rounded-2xl relative">
+                        <div class="absolute top-0 right-0 p-4 opacity-20">
+                            <i class="fa-solid fa-chart-simple text-6xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold mb-6 border-b border-white/10 pb-4">Feature Importance (SHAP)</h3>
+
+                        <!-- Chart Bars -->
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Chest Pain Type</span>
+                                    <span class="text-teal-400">+0.42</span>
+                                </div>
+                                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                                    <div class="bg-teal-400 h-2 rounded-full w-0 transition-all duration-1000 ease-out observer-chart"
+                                        data-width="85%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Max Heart Rate</span>
+                                    <span class="text-blue-400">-0.35</span>
+                                </div>
+                                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                                    <div class="bg-blue-400 h-2 rounded-full w-0 transition-all duration-1000 ease-out observer-chart"
+                                        data-width="70%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Oldpeak (ST Depression)</span>
+                                    <span class="text-teal-400">+0.28</span>
+                                </div>
+                                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                                    <div class="bg-teal-400 h-2 rounded-full w-0 transition-all duration-1000 ease-out observer-chart"
+                                        data-width="55%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span>Major Vessels (Fluoroscopy)</span>
+                                    <span class="text-teal-400">+0.22</span>
+                                </div>
+                                <div class="w-full bg-slate-700/50 rounded-full h-2">
+                                    <div class="bg-teal-400 h-2 rounded-full w-0 transition-all duration-1000 ease-out observer-chart"
+                                        data-width="45%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 text-xs text-center text-slate-500">
+                            *Sample visualization of local interpretability
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section id="demo" class="py-32 relative overflow-hidden">
+        <!-- Background Decor -->
+        <div
+            class="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-blue-900/10 rotate-12 -z-10 blur-3xl rounded-full">
+        </div>
+
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 reveal">
+                <span class="text-teal-400 font-bold tracking-wider uppercase text-sm">Live Analysis</span>
+                <h2 class="text-4xl md:text-5xl font-display font-bold mt-2 mb-6">Comprehensive Risk Assessment</h2>
+                <p class="text-slate-400 max-w-xl mx-auto">Enter clinical data to generate a multi-factor risk profile
+                    and
+                    explainable AI insights.</p>
+            </div>
+
+            <div class="max-w-6xl mx-auto">
+                <!-- Form Section -->
+                <form id="clinicalForm" onsubmit="event.preventDefault(); window.handleAnalysis();" class="reveal">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+                        <!-- Demographics -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+                                <i class="fa-solid fa-user-tag text-teal-400"></i>
+                                <h3 class="font-bold text-lg">Demographics</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Age
+                                        (1-120)</label>
+                                    <input type="number" id="age" min="1" max="120"
+                                        class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-all invalid:border-red-500"
+                                        required oninput="validateForm()">
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Sex</label>
+                                    <div class="flex gap-4">
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="radio" name="sex" value="1" class="peer hidden" checked
+                                                onchange="validateForm()">
+                                            <div
+                                                class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-blue-500 peer-checked:border-blue-500 relative flex items-center justify-center">
+                                            </div>
+                                            <span
+                                                class="text-sm text-slate-400 group-hover:text-white transition-colors">Male</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="radio" name="sex" value="0" class="peer hidden"
+                                                onchange="validateForm()">
+                                            <div
+                                                class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-pink-500 peer-checked:border-pink-500 relative flex items-center justify-center">
+                                            </div>
+                                            <span
+                                                class="text-sm text-slate-400 group-hover:text-white transition-colors">Female</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chest Pain -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+                                <i class="fa-solid fa-heart-crack text-red-400"></i>
+                                <h3 class="font-bold text-lg">Chest Pain (CP)</h3>
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Type</label>
+                                <select id="cp"
+                                    class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all"
+                                    required onchange="validateForm()">
+                                    <option value="0">Asymptomatic</option>
+                                    <option value="1">Atypical Angina</option>
+                                    <option value="2">Non-anginal Pain</option>
+                                    <option value="3">Typical Angina</option>
+                                </select>
+                            </div>
+                            <div class="mt-4">
+                                <label
+                                    class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Exercise
+                                    Induced Angina?</label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                        <input type="radio" name="exang" value="1" class="peer hidden"
+                                            onchange="validateForm()">
+                                        <div
+                                            class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-red-500 peer-checked:border-red-500">
+                                        </div>
+                                        <span class="text-sm text-slate-400">Yes</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer group">
+                                        <input type="radio" name="exang" value="0" class="peer hidden" checked
+                                            onchange="validateForm()">
+                                        <div
+                                            class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-green-500 peer-checked:border-green-500">
+                                        </div>
+                                        <span class="text-sm text-slate-400">No</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vitals -->
+                        <div class="glass-card p-6 rounded-2xl">
+                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+                                <i class="fa-solid fa-stethoscope text-blue-400"></i>
+                                <h3 class="font-bold text-lg">Vitals</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Resting
+                                        BP
+                                        (mm Hg)</label>
+                                    <input type="number" id="trestbps" min="80" max="200"
+                                        class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 invalid:border-red-500"
+                                        required oninput="validateForm()">
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Max
+                                        Heart
+                                        Rate</label>
+                                    <input type="number" id="thalach" min="60" max="220"
+                                        class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 invalid:border-red-500"
+                                        required oninput="validateForm()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Blood Tests -->
+                        <div class="glass-card p-6 rounded-2xl lg:col-span-2">
+                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+                                <i class="fa-solid fa-flask text-purple-400"></i>
+                                <h3 class="font-bold text-lg">Blood & Metabolic</h3>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Cholesterol
+                                        (mg/dl)</label>
+                                    <input type="number" id="chol" min="100" max="600"
+                                        class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 invalid:border-red-500"
+                                        required oninput="validateForm()">
+                                </div>
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Fasting
+                                        Blood Sugar > 120?</label>
+                                    <div class="flex gap-4 mt-2">
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="radio" name="fbs" value="1" class="peer hidden"
+                                                onchange="validateForm()">
+                                            <div
+                                                class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-orange-500 peer-checked:border-orange-500">
+                                            </div>
+                                            <span class="text-sm text-slate-400">Yes (High)</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input type="radio" name="fbs" value="0" class="peer hidden" checked
+                                                onchange="validateForm()">
+                                            <div
+                                                class="w-4 h-4 rounded-full border border-slate-500 peer-checked:bg-green-500 peer-checked:border-green-500">
+                                            </div>
+                                            <span class="text-sm text-slate-400">No (Normal)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cardiac Tests -->
+                        <div class="glass-card p-6 rounded-2xl lg:col-span-1">
+                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
+                                <i class="fa-solid fa-laptop-medical text-green-400"></i>
+                                <h3 class="font-bold text-lg">Cardiac Tests</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label
+                                        class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Resting
+                                        ECG</label>
+                                    <select id="restecg"
+                                        class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                        required onchange="validateForm()">
+                                        <option value="0">Normal</option>
+                                        <option value="1">ST-T Wave Abnormality</option>
+                                        <option value="2">LV Hypertrophy</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Oldpeak</label>
+                                        <input type="number" id="oldpeak" step="0.1" min="0" max="6"
+                                            class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                                            required oninput="validateForm()">
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Slope</label>
+                                        <select id="slope"
+                                            class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                            required onchange="validateForm()">
+                                            <option value="0">Upsloping</option>
+                                            <option value="1">Flat</option>
+                                            <option value="2">Downsloping</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Major
+                                            Vessels (0-4)</label>
+                                        <select id="ca"
+                                            class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                            required onchange="validateForm()">
+                                            <option value="0">0</option>
+                                            <option value="1">1</option>
+                                            <option value="2">2</option>
+                                            <option value="3">3</option>
+                                            <option value="4">4</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Thalassemia</label>
+                                        <select id="thal"
+                                            class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                                            required onchange="validateForm()">
+                                            <option value="0">Normal</option>
+                                            <option value="1">Fixed Defect</option>
+                                            <option value="2">Reversible</option>
+                                            <option value="3">Unknown</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex flex-col md:flex-row gap-4 justify-center items-center mt-8">
+                        <button type="button" onclick="window.loadSampleData()"
+                            class="glass-btn px-6 py-3 rounded-xl text-slate-300 hover:text-white transition-all text-sm font-medium">
+                            <i class="fa-solid fa-bolt mr-2 text-yellow-500"></i> Load Sample Data
+                        </button>
+                        <button type="submit" id="analyzeBtn" disabled
+                            class="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl text-white font-bold text-lg hover:shadow-lg hover:shadow-blue-500/40 hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            Analyze Risk Profile
+                        </button>
+                        <button type="button" onclick="document.getElementById('clinicalForm').reset(); validateForm()"
+                            class="glass-btn px-6 py-3 rounded-xl text-slate-300 hover:text-white transition-all text-sm font-medium">
+                            Clear
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading State -->
+                <div id="loadingSection" class="hidden py-20 text-center">
+                    <div class="inline-block relative">
+                        <div class="w-24 h-24 rounded-full border-4 border-slate-800 border-t-blue-500 animate-spin">
+                        </div>
+                        <i
+                            class="fa-solid fa-brain absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500 text-2xl animate-pulse"></i>
+                    </div>
+                    <h3 class="mt-6 text-xl font-bold">Processing Clinical Data...</h3>
+                    <p class="text-slate-400 mt-2">Running ensemble models and generating SHAP explanations.</p>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="hidden mt-16 animate-fade-in">
+                    <!-- Top Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                        <!-- Risk Gauge (Center) -->
+                        <div
+                            class="order-1 md:order-2 glass-card p-8 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden text-center">
+                            <div class="relative w-48 h-48 flex items-center justify-center">
+                                <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                    <path class="text-slate-800"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none" stroke="currentColor" stroke-width="2" />
+                                    <path id="resultCircle"
+                                        class="text-emerald-500 transition-all duration-1000 ease-out"
+                                        stroke-dasharray="0, 100"
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        fill="none" stroke="currentColor" stroke-width="2" />
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span id="riskScoreDisplay"
+                                        class="text-5xl font-bold text-white tracking-tighter">0%</span>
+                                    <span class="text-xs text-slate-400 uppercase mt-1">Probability</span>
+                                </div>
+                            </div>
+                            <div id="riskBadge"
+                                class="mt-6 px-4 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm font-bold uppercase tracking-wider border border-emerald-500/50">
+                                Low Risk
+                            </div>
+                        </div>
+
+                        <!-- Clinical Rec -->
+                        <div class="order-2 md:order-1 glass-card p-8 rounded-2xl flex flex-col justify-center">
+                            <h4 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4"><i
+                                    class="fa-solid fa-clipboard-check mr-2"></i> Recommendation</h4>
+                            <p id="recommendationText" class="text-lg text-slate-200 leading-relaxed font-medium">--</p>
+                        </div>
+
+                        <!-- Confidence -->
+                        <div class="order-3 md:order-3 glass-card p-8 rounded-2xl flex flex-col justify-center">
+                            <h4 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4"><i
+                                    class="fa-solid fa-chart-line mr-2"></i> Model Confidence</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span>Precision</span>
+                                        <span class="font-mono text-blue-400">92%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 rounded-full h-1.5">
+                                        <div class="bg-blue-500 h-1.5 rounded-full w-[92%]"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span>Recall</span>
+                                        <span class="font-mono text-purple-400">89%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 rounded-full h-1.5">
+                                        <div class="bg-purple-500 h-1.5 rounded-full w-[89%]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Explainability Tabs -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <div class="flex border-b border-white/10 overflow-x-auto bg-black/20">
+                            <button onclick="switchTab('tab-shap')" data-tab="tab-shap"
+                                class="tab-btn min-w-[120px] flex-1 py-4 text-xs md:text-sm font-bold text-white border-b-2 border-blue-500 bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-chart-area"></i> SHAP Waterfall
+                            </button>
+                            <button onclick="switchTab('tab-lime')" data-tab="tab-lime"
+                                class="tab-btn min-w-[120px] flex-1 py-4 text-xs md:text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-chart-column"></i> LIME Analysis
+                            </button>
+                            <button onclick="switchTab('tab-force')" data-tab="tab-force"
+                                class="tab-btn min-w-[120px] flex-1 py-4 text-xs md:text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Force Plot
+                            </button>
+                            <button onclick="switchTab('tab-table')" data-tab="tab-table"
+                                class="tab-btn min-w-[120px] flex-1 py-4 text-xs md:text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-table"></i> Feature Data
+                            </button>
+                        </div>
+
+                        <!-- Tabs Content -->
+                        <div class="p-6 md:p-8 bg-black/20 min-h-[500px] relative">
+
+                            <!-- Tab 1: SHAP Waterfall -->
+                            <div id="tab-shap" class="tab-content block h-full animate-fade-in">
+                                <div class="flex flex-col h-full">
+                                    <div class="flex justify-between items-center mb-6">
+                                        <div>
+                                            <h4 class="text-white font-bold text-lg">Feature Impact Waterfall</h4>
+                                            <p class="text-xs text-slate-400">Illustrates how each clinical feature
+                                                pushes the risk score from the baseline.</p>
+                                        </div>
+                                        <button
+                                            class="bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-xs text-slate-300 transition flex items-center gap-2">
+                                            <i class="fa-solid fa-download"></i> Save
+                                        </button>
+                                    </div>
+                                    <div
+                                        class="flex-grow bg-white/5 rounded-xl flex items-center justify-center overflow-hidden relative border border-white/5 min-h-[400px]">
+                                        <div id="shapLoader"
+                                            class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 transition-opacity duration-500 backdrop-blur-sm">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div
+                                                    class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin">
+                                                </div>
+                                                <span class="text-blue-400 text-xs font-mono animate-pulse">GENERATING
+                                                    PLOT...</span>
+                                            </div>
+                                        </div>
+                                        <img id="shapPlotImg"
+                                            class="max-w-full max-h-[500px] object-contain transform transition hover:scale-105 duration-500 p-4"
+                                            alt="SHAP Plot Analysis">
+                                    </div>
+                                    <div class="mt-4 flex gap-4 text-xs text-slate-500 justify-center">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 bg-red-400 rounded-sm"></div> Increases Risk
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-3 h-3 bg-blue-400 rounded-sm"></div> Decreases Risk
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 2: LIME -->
+                            <div id="tab-lime" class="tab-content hidden h-full animate-fade-in">
+                                <div class="flex flex-col h-full">
+                                    <div class="flex justify-between items-center mb-6">
+                                        <div>
+                                            <h4 class="text-white font-bold text-lg">Local Interpretable Model (LIME)
+                                            </h4>
+                                            <p class="text-xs text-slate-400">Alternative explanation method focusing on
+                                                local decision boundaries.</p>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="flex-grow bg-white/5 rounded-xl flex items-center justify-center overflow-hidden relative border border-white/5 min-h-[400px]">
+                                        <div id="limeLoader"
+                                            class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10 transition-opacity duration-500 backdrop-blur-sm">
+                                            <div class="flex flex-col items-center gap-3">
+                                                <div
+                                                    class="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin">
+                                                </div>
+                                                <span class="text-purple-400 text-xs font-mono animate-pulse">GENERATING
+                                                    LIME...</span>
+                                            </div>
+                                        </div>
+                                        <img id="limePlotImg" class="max-w-full max-h-[500px] object-contain p-4"
+                                            alt="LIME Plot Analysis">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Interactive Force Plot -->
+                            <div id="tab-force" class="tab-content hidden h-full animate-fade-in">
+                                <div class="mb-4">
+                                    <h4 class="text-white font-bold text-lg">Interactive Force Plot</h4>
+                                    <p class="text-xs text-slate-400">Hover over the bars to see precise feature
+                                        contributions.</p>
+                                </div>
+                                <div
+                                    class="w-full h-[450px] bg-white text-black rounded-xl overflow-hidden shadow-inner border border-white/10">
+                                    <iframe id="forcePlotFrame" class="w-full h-full border-0"></iframe>
+                                </div>
+                            </div>
+
+                            <!-- Tab 4: Raw Values Table -->
+                            <div id="tab-table" class="tab-content hidden h-full animate-fade-in">
+                                <div class="flex justify-between items-end mb-4">
+                                    <div>
+                                        <h4 class="text-white font-bold text-lg">Detailed Feature Contributions</h4>
+                                        <p class="text-xs text-slate-400">Numerical breakdown of impact on prediction.
+                                        </p>
+                                    </div>
+                                    <div
+                                        class="bg-black/40 px-3 py-1 rounded text-xs text-slate-400 border border-white/10">
+                                        Base Risk: <span id="baseValueDisplay"
+                                            class="text-white font-mono font-bold ml-1">-</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="overflow-x-auto rounded-xl border border-white/10 max-h-[400px] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-black/20">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="sticky top-0 bg-slate-900 z-10">
+                                            <tr class="text-xs text-slate-500 uppercase border-b border-white/10">
+                                                <th class="p-4 bg-black/20">Clinical Feature</th>
+                                                <th class="p-4 bg-black/20 text-right">SHAP Value</th>
+                                                <th class="p-4 bg-black/20 text-center w-1/3">Impact Magnitude</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="shapTableBody" class="font-mono divide-y divide-white/5 bg-black/20">
+                                            <!-- Rows injected by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-4 text-center text-xs text-slate-500 italic">
+                                    Sorted by absolute impact value.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Educational Section -->
+                    <div class="bg-white/5 rounded-2xl p-6 border border-white/5 mt-8">
+                        <details class="group">
+                            <summary class="flex justify-between items-center cursor-pointer list-none">
+                                <span class="text-white font-bold flex items-center gap-2"><i
+                                        class="fa-solid fa-book-medical text-blue-400"></i> Understanding Your
+                                    Results</span>
+                                <span class="transition group-open:rotate-180 text-slate-400"><i
+                                        class="fa-solid fa-chevron-down"></i></span>
+                            </summary>
+                            <div
+                                class="text-slate-400 mt-4 space-y-4 text-sm leading-relaxed border-t border-white/5 pt-4">
+                                <p><strong class="text-blue-300">SHAP Waterfall:</strong> Features in <span
+                                        class="text-red-400">Red</span> push the risk higher, while <span
+                                        class="text-blue-400">Blue</span> features lower the risk. The length of the bar
+                                    represents the strength of the influence.</p>
+                                <p><strong class="text-purple-300">LIME:</strong> A local approximation showing which
+                                    features (Green for healthy, Red for disease) were most important for this specific
+                                    patient's classification.</p>
+                                <p><strong class="text-emerald-300">Accuracy:</strong> This XGBoost model has an
+                                    accuracy of ~85-90%. Always consult with a cardiologist for definitive diagnosis.
+                                </p>
+                            </div>
+                        </details>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Section -->
+    <section class="py-20 text-center">
+        <p class="text-slate-500 text-sm mb-8 tracking-widest uppercase">Trusted Medical Standards</p>
+        <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60">
+            <div class="flex items-center gap-3 text-lg font-bold text-slate-300">
+                <i class="fa-solid fa-shield-virus text-2xl"></i> HIPAA Compliant
+            </div>
+            <div class="flex items-center gap-3 text-lg font-bold text-slate-300">
+                <i class="fa-solid fa-file-contract text-2xl"></i> FDA Guidelines
+            </div>
+            <div class="flex items-center gap-3 text-lg font-bold text-slate-300">
+                <i class="fa-solid fa-flask text-2xl"></i> Clinically Validated
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-black/40 border-t border-white/5 py-12 backdrop-blur-lg">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid fa-heart-pulse text-blue-500"></i>
+                        <span class="text-xl font-display font-bold">Cardio<span class="text-blue-400">AI</span></span>
+                    </div>
+                    <p class="text-sm text-slate-500">Next-gen clinical decision support.</p>
+                </div>
+
+                <div class="flex gap-8 text-sm text-slate-400">
+                    <a href="#" class="hover:text-blue-400 transition-colors">Documentation</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">API Access</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Research Paper</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Contact</a>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-white/5 text-center text-xs text-slate-600">
+                &copy; 2024 CardioAI Inc. All rights reserved. For demonstration purposes only.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // --- 1. Canvas Background Animation (Simulating Video) ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        let connections = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+                this.color = Math.random() > 0.5 ? 'rgba(59, 130, 246, ' : 'rgba(6, 182, 212, ';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color + '0.4)';
+                ctx.fill();
+            }
+        }
+
+        // ECG Line
+        let ecgPoints = [];
+        let ecgX = 0;
+
+        function init() {
+            resize();
+            for (let i = 0; i < 60; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function drawECG() {
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.15)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            // Grid lines
+            for (let i = 0; i < width; i += 50) {
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+            }
+            for (let i = 0; i < height; i += 50) {
+                ctx.moveTo(0, i);
+                ctx.lineTo(width, i);
+            }
+            ctx.stroke();
+
+            // Heartbeat line
+            ecgX += 2;
+            if (ecgX > width) {
+                ecgX = 0;
+                ecgPoints = [];
+            }
+
+            // Create heartbeat pattern: flat, then spike, then flat
+            let y = height / 2;
+            let relativeX = ecgX % 600; // Repeat every 600px
+
+            if (relativeX > 200 && relativeX < 300) {
+                // The spike QRS complex approximation
+                if (relativeX < 220) y -= (relativeX - 200) * 1;
+                else if (relativeX < 240) y += (relativeX - 220) * 4;
+                else if (relativeX < 260) y -= (relativeX - 240) * 6;
+                else if (relativeX < 280) y += (relativeX - 260) * 2;
+            } else if (relativeX > 350 && relativeX < 400) {
+                // T Wave
+                y -= Math.sin((relativeX - 350) * 0.1) * 30;
+            }
+
+            // Slight noise
+            y += (Math.random() - 0.5) * 5;
+
+            ecgPoints.push({ x: ecgX, y: y });
+
+            // Draw trail
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#3B82F6';
+            ctx.strokeStyle = '#3B82F6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            // Only draw last 300 points to fade out
+            const startParams = ecgPoints.length > 200 ? ecgPoints.length - 200 : 0;
+
+            for (let i = startParams; i < ecgPoints.length; i++) {
+                if (i === startParams) ctx.moveTo(ecgPoints[i].x, ecgPoints[i].y);
+                else ctx.lineTo(ecgPoints[i].x, ecgPoints[i].y);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw particles
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // Connect nearby particles
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 150) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            drawECG();
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', resize);
+        init();
+        animate();
+
+        // --- 2. Interactive Components ---
+
+        // Scroll Reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Chart Animator
+        const chartObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const bar = entry.target;
+                    bar.style.width = bar.getAttribute('data-width');
+                }
+            });
+        });
+
+        document.querySelectorAll('.observer-chart').forEach(el => chartObserver.observe(el));
+
+        // Number Counter
+        const countObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const counter = entry.target;
+                    const target = parseInt(counter.getAttribute('data-target'));
+                    const duration = 2000;
+                    const step = Math.ceil(target / (duration / 16));
+                    let current = 0;
+
+                    if (counter.classList.contains('counted')) return;
+                    counter.classList.add('counted');
+
+                    const timer = setInterval(() => {
+                        current += step;
+                        if (current >= target) {
+                            current = target;
+                            clearInterval(timer);
+                            if (target === 95) counter.innerText = current + "%";
+                            else if (target === 10000) counter.innerText = "10k+";
+                            else if (target === 500) counter.innerText = "500+";
+                            else counter.innerText = "<" + current;
+                        } else {
+                            counter.innerText = current;
+                        }
+                    }, 16);
+                }
+            });
+        });
+
+        document.querySelectorAll('.counter').forEach(el => countObserver.observe(el));
+
+        // 3D Tilt Effect
+        document.querySelectorAll('.tilt-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const rotateX = ((y - centerY) / centerY) * -5; // Max 5 deg
+                const rotateY = ((x - centerX) / centerX) * 5;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+            });
+        });
+
+        // Magnetic Buttons
+        document.querySelectorAll('.magnetic-btn').forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+
+                btn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'translate(0, 0)';
+            });
+        });
+
+        // --- 3. Clinical Application Logic ---
+
+        // API Configuration
+        const API_BASE_URL = window.BACKEND_URL || 'https://your-backend-service.onrender.com';
+
+        // State
+        let currentPrediction = null;
+
+        function validateForm() {
+            const requiredIds = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak'];
+            let isValid = true;
+
+            // Check number inputs
+            requiredIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value || el.validity.badInput) isValid = false;
+            });
+
+            const btn = document.getElementById('analyzeBtn');
+            if (isValid) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        window.loadSampleData = function () {
+            document.getElementById('age').value = 63;
+            document.querySelector('input[name="sex"][value="1"]').checked = true;
+            document.getElementById('cp').value = 3;
+            document.getElementById('trestbps').value = 145;
+            document.getElementById('chol').value = 233;
+            document.querySelector('input[name="fbs"][value="1"]').checked = true;
+            document.getElementById('restecg').value = 0;
+            document.getElementById('thalach').value = 150;
+            document.querySelector('input[name="exang"][value="0"]').checked = true;
+            document.getElementById('oldpeak').value = 2.3;
+            document.getElementById('slope').value = 0;
+            document.getElementById('ca').value = 0;
+            document.getElementById('thal').value = 1;
+            validateForm();
+        }
+
+        window.handleAnalysis = async function () {
+            const loading = document.getElementById('loadingSection');
+            const results = document.getElementById('resultsSection');
+            const form = document.getElementById('clinicalForm');
+
+            // UI State
+            form.classList.add('opacity-50', 'pointer-events-none');
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            loading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Gather Data
+            const formData = {
+                age: parseInt(document.getElementById('age').value),
+                sex: parseInt(document.querySelector('input[name="sex"]:checked').value),
+                cp: parseInt(document.getElementById('cp').value),
+                trestbps: parseInt(document.getElementById('trestbps').value),
+                chol: parseInt(document.getElementById('chol').value),
+                fbs: parseInt(document.querySelector('input[name="fbs"]:checked').value),
+                restecg: parseInt(document.getElementById('restecg').value),
+                thalach: parseInt(document.getElementById('thalach').value),
+                exang: parseInt(document.querySelector('input[name="exang"]:checked').value),
+                oldpeak: parseFloat(document.getElementById('oldpeak').value),
+                slope: parseInt(document.getElementById('slope').value),
+                ca: parseInt(document.getElementById('ca').value),
+                thal: parseInt(document.getElementById('thal').value)
+            };
+
+            try {
+                // 1. Predict
+                const predResponse = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!predResponse.ok) throw new Error('Prediction service unavailable');
+                const predResult = await predResponse.json();
+                currentPrediction = predResult;
+
+                // 2. Fetch Explanations (Parallel)
+                // We'll trigger image loads by setting src attributes later, 
+                // but we need raw SHAP values now for the table.
+                const shapResponse = await fetch(`${API_BASE_URL}/explain`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const shapData = await shapResponse.json();
+
+                // 3. Render Results
+                renderResults(predResult, shapData);
+
+                // 4. Update UI
+                loading.classList.add('hidden');
+                form.classList.remove('opacity-50', 'pointer-events-none');
+                results.classList.remove('hidden');
+                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                console.error(error);
+                loading.classList.add('hidden');
+                form.classList.remove('opacity-50', 'pointer-events-none');
+                alert("Error connecting to Clinical AI Service. Please ensure the backend is running.");
+            }
+        }
+
+        function renderResults(prediction, shapData) {
+            // Risk Gauge
+            const percentage = (prediction.probability * 100).toFixed(1);
+            animateGauge(percentage, prediction.risk_category);
+
+            // Text Details
+            updateClinicalRecs(prediction.risk_category);
+
+            // Metrics
+            document.getElementById('modelName').innerText = prediction.model;
+            document.getElementById('modelVersion').innerText = prediction.model_version || '1.0';
+
+            // Visualizations
+            loadVisualizations();
+
+            // SHAP Table
+            renderShapTable(shapData);
+        }
+
+        function animateGauge(percentage, category) {
+            const circle = document.getElementById('resultCircle');
+            const display = document.getElementById('riskScoreDisplay');
+            const badge = document.getElementById('riskBadge');
+
+            // Reset
+            circle.style.transition = 'none';
+            circle.setAttribute('stroke-dasharray', '0, 100');
+
+            // Color
+            let colorClass = 'text-emerald-500';
+            let badgeClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
+            let icon = '<i class="fa-solid fa-check ml-2"></i>';
+
+            if (category === 'Medium') {
+                colorClass = 'text-orange-500';
+                badgeClass = 'bg-orange-500/20 text-orange-400 border-orange-500/50';
+                icon = '<i class="fa-solid fa-triangle-exclamation ml-2"></i>';
+            } else if (category === 'High') {
+                colorClass = 'text-red-500';
+                badgeClass = 'bg-red-500/20 text-red-400 border-red-500/50';
+                icon = '<i class="fa-solid fa-circle-exclamation ml-2"></i>';
+            }
+
+            // Apply styles
+            setTimeout(() => {
+                circle.setAttribute('class', `transition-all duration-1000 ease-out ${colorClass}`);
+                circle.setAttribute('stroke-dasharray', `${percentage}, 100`);
+
+                badge.className = `mt-6 px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wider border ${badgeClass}`;
+                badge.innerHTML = `${category} Risk ${icon}`;
+            }, 100);
+
+            // Counter
+            let start = 0;
+            const target = parseFloat(percentage);
+            const timer = setInterval(() => {
+                if (start < target) {
+                    start += 0.5;
+                    if (start > target) start = target;
+                    display.innerText = start.toFixed(1) + "%";
+                } else {
+                    clearInterval(timer);
+                }
+            }, 20);
+        }
+
+        function updateClinicalRecs(category) {
+            const recText = document.getElementById('recommendationText');
+            if (category === 'High') {
+                recText.innerHTML = "Patient stratification indicates <span class='text-red-400 font-bold'>High Probability</span> of CAD. Immediate angiographic assessment recommended. Review Modifiable factors (Cholesterol/BP).";
+            } else if (category === 'Medium') {
+                recText.innerHTML = "Patient falls in <span class='text-orange-400 font-bold'>Intermediate Risk</span> zone. Consider Calcium Scoring or Stress Test. Monitor lifestyle factors and re-evaluate in 3 months.";
+            } else {
+                recText.innerHTML = "Patient indicates <span class='text-emerald-400 font-bold'>Low Risk</span> profile. Continuation of current preventative measures and annual checkup recommended.";
+            }
+        }
+
+        function loadVisualizations() {
+            // Add cache buster to prevent cached images
+            const timestamp = new Date().getTime();
+
+            const shapImg = document.getElementById('shapPlotImg');
+            shapImg.src = `${API_BASE_URL}/explain/shap-plot?t=${timestamp}`;
+            shapImg.onload = () => document.getElementById('shapLoader').classList.add('hidden');
+
+            const limeImg = document.getElementById('limePlotImg');
+            limeImg.src = `${API_BASE_URL}/explain/lime-plot?t=${timestamp}`;
+            limeImg.onload = () => document.getElementById('limeLoader').classList.add('hidden');
+
+            const forceFrame = document.getElementById('forcePlotFrame');
+            forceFrame.src = `${API_BASE_URL}/explain/shap-force?t=${timestamp}`;
+        }
+
+        function renderShapTable(data) {
+            const tbody = document.getElementById('shapTableBody');
+            tbody.innerHTML = '';
+            document.getElementById('baseValueDisplay').innerText = data.base_value.toFixed(4);
+
+            const features = [];
+            for (const [key, value] of Object.entries(data.shap_values)) {
+                features.push({
+                    name: parseFeatureName(key),
+                    value: value,
+                    abs: Math.abs(value)
+                });
+            }
+
+            // Sort by absolute impact
+            features.sort((a, b) => b.abs - a.abs);
+
+            // Display Top 10
+            features.slice(0, 10).forEach(f => {
+                const row = document.createElement('tr');
+                row.className = "border-b border-white/5 hover:bg-white/5 transition-colors";
+
+                const impactClass = f.value > 0 ? 'text-red-400' : 'text-emerald-400';
+                const arrow = f.value > 0 ? '<i class="fa-solid fa-arrow-up"></i>' : '<i class="fa-solid fa-arrow-down"></i>';
+                const impactBg = f.value > 0 ? 'bg-red-500/10' : 'bg-emerald-500/10';
+
+                row.innerHTML = `
+                    <td class="p-3 text-sm text-slate-300 font-medium">${f.name}</td>
+                    <td class="p-3 text-sm font-mono ${impactClass} text-right">
+                        <span class="px-2 py-1 rounded ${impactBg}">
+                            ${f.value > 0 ? '+' : ''}${f.value.toFixed(4)} ${arrow}
+                        </span>
+                    </td>
+                    <td class="p-3 text-xs text-slate-500 text-center">
+                       <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                           <div class="${f.value > 0 ? 'bg-red-500' : 'bg-emerald-500'} h-full" style="width: ${Math.min(f.abs * 50, 100)}%"></div>
+                       </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function parseFeatureName(encoded) {
+            const mapping = {
+                'num__age': 'Age',
+                'num__trestbps': 'Resting BP',
+                'num__chol': 'Cholesterol',
+                'num__thalach': 'Max Heart Rate',
+                'num__oldpeak': 'ST Depression',
+                'cat__sex_0.0': 'Sex (Female)',
+                'cat__sex_1.0': 'Sex (Male)',
+                'cat__cp_1.0': 'CP: Typical Angina',
+                'cat__cp_2.0': 'CP: Atypical Angina',
+                'cat__cp_3.0': 'CP: Non-anginal',
+                'cat__cp_4.0': 'CP: Asymptomatic',
+                'cat__fbs_0.0': 'Fasting Blood Sugar < 120',
+                'cat__fbs_1.0': 'Fasting Blood Sugar > 120',
+                'cat__restecg_0.0': 'ECG: Normal',
+                'cat__restecg_1.0': 'ECG: Abnormality',
+                'cat__restecg_2.0': 'ECG: Hypertrophy',
+                'cat__exang_0.0': 'Exercise Angina: No',
+                'cat__exang_1.0': 'Exercise Angina: Yes',
+                'cat__slope_0.0': 'Slope: Upsloping',
+                'cat__slope_1.0': 'Slope: Flat',
+                'cat__slope_2.0': 'Slope: Downsloping',
+                'cat__ca_0.0': 'Major Vessels: 0',
+                'cat__ca_1.0': 'Major Vessels: 1',
+                'cat__ca_2.0': 'Major Vessels: 2',
+                'cat__ca_3.0': 'Major Vessels: 3',
+                'cat__thal_1.0': 'Thal: Normal',
+                'cat__thal_2.0': 'Thal: Fixed Defect',
+                'cat__thal_3.0': 'Thal: Reversible'
+            };
+            return mapping[encoded] || encoded;
+        }
+
+        window.switchTab = function (tabId) {
+            // Buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.dataset.tab === tabId) {
+                    btn.classList.add('text-white', 'border-blue-500', 'bg-white/5');
+                    btn.classList.remove('text-slate-400', 'border-transparent');
+                } else {
+                    btn.classList.remove('text-white', 'border-blue-500', 'bg-white/5');
+                    btn.classList.add('text-slate-400', 'border-transparent');
+                }
+            });
+
+            // Content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                if (content.id === tabId) {
+                    content.classList.remove('hidden');
+                    content.classList.add('block');
+                } else {
+                    content.classList.add('hidden');
+                    content.classList.remove('block');
+                }
+            });
+        }
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('py-2');
+                nav.classList.remove('py-4');
+            } else {
+                nav.classList.add('py-4');
+                nav.classList.remove('py-2');
+            }
+
+            // Parallax Background
+            const scrolled = window.scrollY;
+            const bgCanvas = document.getElementById('bg-canvas');
+            bgCanvas.style.transform = `translateY(${scrolled * 0.5}px)`;
+
+            // Parallax for blobs
+            const blobs = document.querySelectorAll('.animate-blob');
+            blobs.forEach((blob, index) => {
+                const speed = 0.2 + (index * 0.1);
+                blob.style.transform = `translateY(${scrolled * speed}px)`;
+            });
+        });
+
+    </script>
+</body>
+
+</html>
