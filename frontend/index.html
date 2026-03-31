@@ -1326,7 +1326,7 @@
         // --- 3. Clinical Application Logic ---
 
         // API Configuration
-        const API_BASE_URL = window.BACKEND_URL || 'https://your-backend-service.onrender.com';
+        const API_BASE_URL = 'https://cardioinsight-hsbb.onrender.com';
 
         // State
         let currentPrediction = null;
@@ -1396,6 +1396,9 @@
                 thal: parseInt(document.getElementById('thal').value)
             };
 
+            // Store formData globally so loadVisualizations can use it for POST requests
+            window._lastFormData = formData;
+
             try {
                 // 1. Predict
                 const predResponse = await fetch(`${API_BASE_URL}/predict`, {
@@ -1443,12 +1446,8 @@
             // Text Details
             updateClinicalRecs(prediction.risk_category);
 
-            // Metrics
-            document.getElementById('modelName').innerText = prediction.model;
-            document.getElementById('modelVersion').innerText = prediction.model_version || '1.0';
-
-            // Visualizations
-            loadVisualizations();
+            // Visualizations (pass formData so POST endpoints get the body they need)
+            loadVisualizations(window._lastFormData);
 
             // SHAP Table
             renderShapTable(shapData);
@@ -1468,7 +1467,7 @@
             let badgeClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
             let icon = '<i class="fa-solid fa-check ml-2"></i>';
 
-            if (category === 'Medium') {
+            if (category === 'Moderate') {
                 colorClass = 'text-orange-500';
                 badgeClass = 'bg-orange-500/20 text-orange-400 border-orange-500/50';
                 icon = '<i class="fa-solid fa-triangle-exclamation ml-2"></i>';
@@ -1505,27 +1504,47 @@
             const recText = document.getElementById('recommendationText');
             if (category === 'High') {
                 recText.innerHTML = "Patient stratification indicates <span class='text-red-400 font-bold'>High Probability</span> of CAD. Immediate angiographic assessment recommended. Review Modifiable factors (Cholesterol/BP).";
-            } else if (category === 'Medium') {
+            } else if (category === 'Moderate') {
                 recText.innerHTML = "Patient falls in <span class='text-orange-400 font-bold'>Intermediate Risk</span> zone. Consider Calcium Scoring or Stress Test. Monitor lifestyle factors and re-evaluate in 3 months.";
             } else {
                 recText.innerHTML = "Patient indicates <span class='text-emerald-400 font-bold'>Low Risk</span> profile. Continuation of current preventative measures and annual checkup recommended.";
             }
         }
 
-        function loadVisualizations() {
-            // Add cache buster to prevent cached images
-            const timestamp = new Date().getTime();
+        function loadVisualizations(formData) {
+            const body = JSON.stringify(formData);
+            const headers = { 'Content-Type': 'application/json' };
 
-            const shapImg = document.getElementById('shapPlotImg');
-            shapImg.src = `${API_BASE_URL}/explain/shap-plot?t=${timestamp}`;
-            shapImg.onload = () => document.getElementById('shapLoader').classList.add('hidden');
+            // SHAP Waterfall — POST, returns image/png
+            fetch(`${API_BASE_URL}/explain/shap-plot`, { method: 'POST', headers, body })
+                .then(r => r.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const img = document.getElementById('shapPlotImg');
+                    img.src = url;
+                    img.onload = () => document.getElementById('shapLoader').classList.add('hidden');
+                })
+                .catch(() => document.getElementById('shapLoader').classList.add('hidden'));
 
-            const limeImg = document.getElementById('limePlotImg');
-            limeImg.src = `${API_BASE_URL}/explain/lime-plot?t=${timestamp}`;
-            limeImg.onload = () => document.getElementById('limeLoader').classList.add('hidden');
+            // LIME — POST, returns image/png
+            fetch(`${API_BASE_URL}/explain/lime-plot`, { method: 'POST', headers, body })
+                .then(r => r.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const img = document.getElementById('limePlotImg');
+                    img.src = url;
+                    img.onload = () => document.getElementById('limeLoader').classList.add('hidden');
+                })
+                .catch(() => document.getElementById('limeLoader').classList.add('hidden'));
 
-            const forceFrame = document.getElementById('forcePlotFrame');
-            forceFrame.src = `${API_BASE_URL}/explain/shap-force?t=${timestamp}`;
+            // Force Plot — POST, returns HTML; load into iframe via srcdoc
+            fetch(`${API_BASE_URL}/explain/shap-force`, { method: 'POST', headers, body })
+                .then(r => r.text())
+                .then(html => {
+                    const frame = document.getElementById('forcePlotFrame');
+                    frame.srcdoc = html;
+                })
+                .catch(err => console.error('Force plot error:', err));
         }
 
         function renderShapTable(data) {
